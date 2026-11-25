@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:myportofolio_mobile/screens/project_form.dart';
-import 'package:myportofolio_mobile/screens/menu.dart';
 import 'package:myportofolio_mobile/screens/education_form.dart';
+import 'package:myportofolio_mobile/screens/menu.dart';
+import 'package:myportofolio_mobile/screens/project_form.dart';
+import 'package:myportofolio_mobile/screens/project_list_screen.dart';
+import 'package:myportofolio_mobile/services/auth_state.dart';
+import 'package:myportofolio_mobile/widgets/auth_guard.dart';
+import 'package:provider/provider.dart';
 
 class ItemCard extends StatelessWidget {
   final ItemHomepage item;
@@ -16,9 +20,30 @@ class ItemCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         // Aksi ketika kartu ditekan oleh pengguna.
-        onTap: () {
-          // Menampilkan SnackBar dengan pesan interaktif.
-          ScaffoldMessenger.of(context)
+        onTap: () async {
+          final messenger = ScaffoldMessenger.of(context);
+          final navigator = Navigator.of(context);
+
+          if (item.name == "Logout") {
+            final authState = context.read<AuthState>();
+            if (!authState.isLoggedIn) {
+              messenger
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  const SnackBar(content: Text("Kamu belum login.")),
+                );
+              return;
+            }
+
+            await authState.logout();
+            if (!context.mounted) return;
+            messenger
+              ..hideCurrentSnackBar()
+              ..showSnackBar(const SnackBar(content: Text("Berhasil logout.")));
+            return;
+          }
+
+          messenger
             ..hideCurrentSnackBar()
             ..showSnackBar(
               SnackBar(
@@ -26,14 +51,23 @@ class ItemCard extends StatelessWidget {
               ),
             );
 
-          if (item.name == "Tambah Proyek") {
-            Navigator.push(
-              context,
+          if (item.name == "Lihat Proyek") {
+            navigator.push(
+              MaterialPageRoute(builder: (_) => const ProjectListScreen()),
+            );
+          } else if (item.name == "Tambah Proyek" ||
+              item.name == "Add Project") {
+            final allowed = await ensureLoggedIn(context);
+            if (!allowed || !context.mounted) return;
+            navigator.push(
               MaterialPageRoute(builder: (context) => const ProjectFormPage()),
             );
-          } else if (item.name == "Tambah Pendidikan") {
-            Navigator.push(
-              context,
+          } else if (item.name == "Tambah Pendidikan" ||
+              item.name == "Add Education" ||
+              item.name == "Add Achievement") {
+            final allowed = await ensureLoggedIn(context);
+            if (!allowed || !context.mounted) return;
+            navigator.push(
               MaterialPageRoute(
                 builder: (context) => const EducationFormPage(),
               ),
